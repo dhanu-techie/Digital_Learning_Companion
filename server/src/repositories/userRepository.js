@@ -1,9 +1,33 @@
+const { v4: uuidv4 } = require('uuid');
 const db = require('../config/db');
 
 class UserRepository {
   async findByUsername(username) {
     const [rows] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
     return rows[0] || null;
+  }
+
+  async findByEmail(email) {
+    const [rows] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
+    return rows[0] || null;
+  }
+
+  async ensureDefaultSchool() {
+    const [schools] = await db.query('SELECT id FROM schools LIMIT 1');
+    if (schools[0]) return schools[0].id;
+
+    const organizationId = uuidv4();
+    const schoolId = uuidv4();
+    await db.query(
+      'INSERT INTO organizations (id, name, code) VALUES (?, ?, ?)',
+      [organizationId, 'Rural Education Mission Trust', 'REMT_ORG']
+    );
+    await db.query(
+      `INSERT INTO schools (id, organization_id, name, code, district, state)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [schoolId, organizationId, 'Govt Higher Secondary School - District A', 'GHSS_DIST_A', 'Dharmapuri', 'Tamil Nadu']
+    );
+    return schoolId;
   }
 
   async findById(id) {

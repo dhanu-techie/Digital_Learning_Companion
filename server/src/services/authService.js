@@ -4,32 +4,65 @@ const { v4: uuidv4 } = require('uuid');
 const env = require('../config/env');
 const userRepository = require('../repositories/userRepository');
 
+const PUBLIC_ROLES = ['student', 'teacher'];
+
+function badRequest(message) {
+  const err = new Error(message);
+  err.statusCode = 400;
+  return err;
+}
+
 class AuthService {
   async register(data) {
-    const existing = await userRepository.findByUsername(data.username);
+    const username = (data.username || '').trim();
+    const password = data.password || '';
+    const firstName = (data.firstName || '').trim();
+    const lastName = (data.lastName || '').trim();
+    const email = (data.email || '').trim() || null;
+    const role = (data.role || 'student').trim();
+
+    if (!username || !password || !firstName || !lastName) {
+      throw badRequest('Username, password, first name, and last name are required.');
+    }
+    if (username.length < 3) {
+      throw badRequest('Username must be at least 3 characters.');
+    }
+    if (password.length < 6) {
+      throw badRequest('Password must be at least 6 characters.');
+    }
+    if (!PUBLIC_ROLES.includes(role)) {
+      throw badRequest('Role must be student or teacher.');
+    }
+
+    const existing = await userRepository.findByUsername(username);
     if (existing) {
-      const err = new Error('Username is already taken.');
-      err.statusCode = 400;
-      throw err;
+      throw badRequest('Username is already taken.');
+    }
+    if (email) {
+      const existingEmail = await userRepository.findByEmail(email);
+      if (existingEmail) {
+        throw badRequest('Email is already registered.');
+      }
     }
 
     const userId = uuidv4();
-    const passwordHash = await bcrypt.hash(data.password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
+    const schoolId = data.schoolId || await userRepository.ensureDefaultSchool();
 
     const user = await userRepository.createUser({
       id: userId,
-      schoolId: data.schoolId,
-      username: data.username,
-      email: data.email,
+      schoolId,
+      username,
+      email,
       phoneNumber: data.phoneNumber,
       passwordHash,
-      role: data.role,
-      firstName: data.firstName,
-      lastName: data.lastName,
+      role,
+      firstName,
+      lastName,
       preferredLanguage: data.preferredLanguage || 'en'
     });
 
-    if (data.role === 'student') {
+    if (role === 'student') {
       await userRepository.createStudentProfile({
         id: uuidv4(),
         userId,
@@ -38,7 +71,7 @@ class AuthService {
         board: data.board || 'StateBoard',
         dateOfBirth: data.dateOfBirth
       });
-    } else if (data.role === 'teacher') {
+    } else if (role === 'teacher') {
       await userRepository.createTeacherProfile({
         id: uuidv4(),
         userId,

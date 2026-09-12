@@ -42,12 +42,15 @@ async function initializeDatabase() {
     const conn = await pool.getConnection();
     console.log(`[DB] Connected successfully to MySQL database: ${env.DB.NAME}`);
 
-    // 3. Check if schema file exists in skills reference and apply if tables don't exist
-    const schemaPath = path.join(__dirname, '../../../.agents/skills/digital-learning-platform/references/mysql_schema.sql');
+    const schemaPath = path.join(__dirname, '../db/mysql_schema.sql');
     if (fs.existsSync(schemaPath)) {
-      const sql = fs.readFileSync(schemaPath, 'utf8');
+      const sql = fs.readFileSync(schemaPath, 'utf8')
+        .replace(/CREATE DATABASE[\s\S]*?;/i, '')
+        .replace(/USE\s+\w+\s*;/i, '');
       await conn.query(sql);
       console.log('[DB] Relational schema validated and applied.');
+    } else {
+      console.warn('[DB] Schema file not found at', schemaPath);
     }
     
     conn.release();

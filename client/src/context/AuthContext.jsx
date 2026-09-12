@@ -20,20 +20,38 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+  const persistSession = (payload) => {
+    const { user, accessToken } = payload;
+    setUser(user);
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('accessToken', accessToken);
+    return { success: true, user };
+  };
+
   const login = async (username, password) => {
     try {
       const response = await apiClient.post('/auth/login', { username, password });
       if (response.data.success) {
-        const { user, accessToken } = response.data.data;
-        setUser(user);
-        localStorage.setItem('user', JSON.stringify(user));
-        localStorage.setItem('accessToken', accessToken);
-        return { success: true, user };
+        return persistSession(response.data.data);
       }
     } catch (err) {
       return {
         success: false,
         message: err.response?.data?.message || 'Login failed. Please check credentials.'
+      };
+    }
+  };
+
+  const register = async (form) => {
+    try {
+      const response = await apiClient.post('/auth/register', form);
+      if (response.data.success) {
+        return persistSession(response.data.data);
+      }
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Sign up failed. Please try again.'
       };
     }
   };
@@ -50,7 +68,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, language, login, logout, changeLanguage }}>
+    <AuthContext.Provider value={{ user, loading, language, login, register, logout, changeLanguage }}>
       {children}
     </AuthContext.Provider>
   );
