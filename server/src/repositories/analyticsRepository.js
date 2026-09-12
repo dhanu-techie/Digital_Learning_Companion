@@ -69,16 +69,23 @@ class AnalyticsRepository {
 
   async getActiveRecommendations(studentId) {
     const [rows] = await db.query(
-      `SELECT r.*, t.title as topic_title, co.id as course_id, co.title as course_title
+      `SELECT r.*, t.title as topic_title, co.id as course_id, co.title as course_title,
+              a.id as assessment_id, a.title as assessment_title, a.assessment_type, a.total_marks, a.duration_minutes
        FROM recommendations r
        LEFT JOIN topics t ON r.topic_id = t.id
        LEFT JOIN chapters ch ON t.chapter_id = ch.id
        LEFT JOIN courses co ON ch.course_id = co.id
+       LEFT JOIN assessments a ON a.subject_id = co.subject_id
        WHERE r.student_id = ? AND r.is_dismissed = FALSE
-       ORDER BY FIELD(r.priority, 'urgent', 'high', 'medium', 'low'), r.created_at DESC`,
+       ORDER BY FIELD(r.priority, 'urgent', 'high', 'medium', 'low'), r.created_at DESC, a.created_at ASC`,
       [studentId]
     );
-    return rows;
+    const seen = new Set();
+    return rows.filter((row) => {
+      if (seen.has(row.id)) return false;
+      seen.add(row.id);
+      return true;
+    });
   }
 
   async findOpenRecommendation(studentId, topicId, recommendationType) {

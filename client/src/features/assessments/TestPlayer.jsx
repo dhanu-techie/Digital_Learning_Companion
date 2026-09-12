@@ -13,7 +13,7 @@ function parseJsonField(value, fallback) {
   }
 }
 
-export default function TestPlayer({ onCompleted }) {
+export default function TestPlayer({ onCompleted, focusAssessmentId }) {
   const [assessments, setAssessments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeAssessment, setActiveAssessment] = useState(null);
@@ -27,6 +27,12 @@ export default function TestPlayer({ onCompleted }) {
   useEffect(() => {
     fetchAssessments();
   }, []);
+
+  useEffect(() => {
+    if (!focusAssessmentId || assessments.length === 0) return;
+    const match = assessments.find((item) => item.id === focusAssessmentId) || assessments[0];
+    openAssessment(match);
+  }, [focusAssessmentId, assessments]);
 
   const fetchAssessments = async () => {
     try {

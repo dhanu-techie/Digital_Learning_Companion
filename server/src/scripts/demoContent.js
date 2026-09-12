@@ -1,5 +1,11 @@
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const db = require('../config/db');
+
+function stableUuid(seed) {
+  const hex = crypto.createHash('md5').update(String(seed)).digest('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
 
 const IDS = {
   org: 'a1000000-0000-4000-8000-000000000001',
@@ -301,7 +307,48 @@ async function ensureClassroomGraph(schoolId, passwordHash) {
     [IDS.parentRel, IDS.parent, IDS.student]
   );
 
+  await ensureAdaptivePath();
   console.log('[SEED] Classroom graph, homework, and parent link are ready.');
+}
+
+async function ensureAdaptivePath() {
+  const [topicRows] = await db.query('SELECT id FROM topics');
+  const topicIds = new Set(topicRows.map((row) => row.id));
+  const masteryPlan = [
+    [IDS.mathT2, 32, 3, 1, 'needs_remediation'],
+    [IDS.mathT1, 60, 2, 1, 'developing'],
+    [IDS.sciT1, 88, 2, 2, 'mastered'],
+    [IDS.sciT2, 42, 2, 1, 'needs_remediation'],
+    [IDS.engT1, 40, 2, 1, 'needs_remediation']
+  ].filter(([topicId]) => topicIds.has(topicId));
+
+  const recPlan = [
+    [IDS.mathT2, 'practice_set', 'high', 'Fractions diagnostic is ready. Take this assessment so the adaptive path can keep you on unlike fractions.'],
+    [IDS.mathT2, 'remedial_lesson', 'high', 'Mastery in adding unlike fractions is 32%. Review the lesson, then retake the diagnostic.'],
+    [IDS.sciT2, 'practice_set', 'high', 'Pressure looks weak. Take the Force and Pressure practice set next.'],
+    [IDS.engT1, 'practice_set', 'medium', 'Reading comprehension check will measure the Village Library passage.'],
+    [IDS.sciT1, 'next_topic', 'low', 'Force is mastered. Continue to Pressure after you finish the science practice set.']
+  ].filter(([topicId]) => topicIds.has(topicId));
+
+  const [students] = await db.query('SELECT id FROM students');
+  for (const student of students) {
+    for (const [topicId, pct, attempts, success, status] of masteryPlan) {
+      await insertIgnore(
+        `INSERT IGNORE INTO topic_mastery (id, student_id, topic_id, mastery_percentage, total_attempts, successful_attempts, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [stableUuid(`${student.id}:mastery:${topicId}`), student.id, topicId, pct, attempts, success, status]
+      );
+    }
+    for (const [topicId, type, priority, reason] of recPlan) {
+      await insertIgnore(
+        `INSERT IGNORE INTO recommendations (id, student_id, topic_id, recommendation_type, reason, priority)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [stableUuid(`${student.id}:rec:${type}:${topicId}`), student.id, topicId, type, reason, priority]
+      );
+    }
+  }
+
+  console.log('[SEED] Adaptive mastery, recommendations, and practice assessments are ready.');
 }
 
 module.exports = { seedDemoContent, IDS };

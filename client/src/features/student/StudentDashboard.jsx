@@ -20,15 +20,24 @@ export default function StudentDashboard() {
   const [streak, setStreak] = useState(0);
   const [learningMode, setLearningMode] = useState(localStorage.getItem('learningMode') || 'visual');
   const [focusCourseId, setFocusCourseId] = useState(null);
+  const [focusAssessmentId, setFocusAssessmentId] = useState(null);
+  const [assessments, setAssessments] = useState([]);
   const [showAIModal, setShowAIModal] = useState(false);
+
+  const openAdaptiveTest = (assessmentId) => {
+    setFocusAssessmentId(assessmentId || null);
+    setActiveTab('test');
+  };
 
   const refreshAdaptive = async () => {
     try {
-      const [recRes, progressRes] = await Promise.all([
+      const [recRes, progressRes, assessRes] = await Promise.all([
         apiClient.get('/students/me/recommendations'),
-        apiClient.get('/students/me/progress')
+        apiClient.get('/students/me/progress'),
+        apiClient.get('/assessments')
       ]);
       if (recRes.data.success) setRecommendations(recRes.data.data || []);
+      if (assessRes.data.success) setAssessments(assessRes.data.data || []);
       if (progressRes.data.success) {
         setTopicMastery(progressRes.data.data.topicMastery || []);
         setStreak(progressRes.data.data.streak?.learning_streak_count || 0);
@@ -117,17 +126,18 @@ export default function StudentDashboard() {
           <AdaptivePath
             recommendations={recommendations}
             topicMastery={topicMastery}
+            assessments={assessments}
             learningMode={learningMode}
             onChangeMode={changeMode}
             onOpenCourse={(courseId) => {
               setFocusCourseId(courseId);
               setActiveTab('courses');
             }}
-            onOpenTest={() => setActiveTab('test')}
+            onOpenTest={openAdaptiveTest}
           />
         )}
         {activeTab === 'courses' && <CourseCatalog focusCourseId={focusCourseId} learningMode={learningMode} />}
-        {activeTab === 'test' && <TestPlayer onCompleted={refreshAdaptive} />}
+        {activeTab === 'test' && <TestPlayer onCompleted={refreshAdaptive} focusAssessmentId={focusAssessmentId} />}
         {activeTab === 'assignments' && <AssignmentsPanel />}
         {activeTab === 'doubts' && <DoubtChatRoom />}
       </div>
