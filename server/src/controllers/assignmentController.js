@@ -51,6 +51,21 @@ class AssignmentController {
     }
   }
 
+  async getSubmissions(req, res, next) {
+    try {
+      const submissions = await assignmentService.getTeacherSubmissions(req.user.id);
+      res.json({
+        success: true,
+        message: 'Assignment submissions fetched successfully',
+        data: submissions,
+        error: null,
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async evaluateSubmission(req, res, next) {
     try {
       const { submissionId, marksAwarded, teacherFeedback } = req.body;

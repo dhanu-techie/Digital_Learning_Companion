@@ -60,6 +60,24 @@ class AssignmentRepository {
     );
   }
 
+  async findSubmissionsByTeacher(teacherId) {
+    const [rows] = await db.query(
+      `SELECT sub.id, sub.assignment_id, sub.student_id, sub.submission_text, sub.status,
+              sub.marks_awarded, sub.teacher_feedback, sub.submitted_at,
+              a.title as assignment_title, a.max_marks, s.name as subject_name,
+              u.first_name, u.last_name
+       FROM assignment_submissions sub
+       JOIN assignments a ON a.id = sub.assignment_id
+       JOIN students st ON st.id = sub.student_id
+       JOIN users u ON u.id = st.user_id
+       JOIN subjects s ON s.id = a.subject_id
+       WHERE a.teacher_id = ?
+       ORDER BY sub.submitted_at DESC`,
+      [teacherId]
+    );
+    return rows;
+  }
+
   async evaluateSubmission(submissionId, marksAwarded, feedback) {
     await db.query(
       `UPDATE assignment_submissions

@@ -9,6 +9,8 @@ export default function TeacherDashboard() {
   const [isAvailable, setIsAvailable] = useState(true);
   const [interventions, setInterventions] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+  const [marksDraft, setMarksDraft] = useState({});
   const [tab, setTab] = useState('help');
   const [homeworkTitle, setHomeworkTitle] = useState('Practice set');
   const [homeworkBody, setHomeworkBody] = useState('');
@@ -34,6 +36,9 @@ export default function TeacherDashboard() {
     apiClient.get('/assignments').then((res) => {
       if (res.data.success) setAssignments(res.data.data || []);
     }).catch(() => setAssignments([]));
+    apiClient.get('/assignments/submissions').then((res) => {
+      if (res.data.success) setSubmissions(res.data.data || []);
+    }).catch(() => setSubmissions([]));
   }, []);
 
   const toggleAvailability = async () => {
@@ -68,6 +73,20 @@ export default function TeacherDashboard() {
       if (res.data.success) setAssignments(res.data.data || []);
     } catch (err) {
       alert(err.response?.data?.message || 'Could not create assignment');
+    }
+  };
+
+  const evaluate = async (submissionId, maxMarks) => {
+    try {
+      await apiClient.post('/assignments/evaluate', {
+        submissionId,
+        marksAwarded: Number(marksDraft[submissionId] || 0),
+        teacherFeedback: Number(marksDraft[submissionId] || 0) >= (maxMarks / 2) ? 'Good work' : 'Revise and resubmit'
+      });
+      const res = await apiClient.get('/assignments/submissions');
+      if (res.data.success) setSubmissions(res.data.data || []);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Could not evaluate submission');
     }
   };
 
@@ -163,6 +182,37 @@ export default function TeacherDashboard() {
               <div class="text-xs text-gray-500">{item.subject_name} • due {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'soon'}</div>
             </div>
           ))}
+          <h3 class="text-sm font-black text-gray-900 pt-2">Student submissions</h3>
+          {submissions.map((item) => (
+            <div key={item.id} class="bg-white rounded-2xl p-4 border border-gray-100 text-sm space-y-2">
+              <div class="font-bold">{item.first_name} {item.last_name}</div>
+              <div class="text-xs text-gray-500">{item.assignment_title} • {item.status}</div>
+              <p class="text-xs text-gray-700 bg-gray-50 rounded-xl p-3">{item.submission_text || 'No written answer'}</p>
+              {item.status === 'evaluated' ? (
+                <p class="text-xs font-bold text-emerald-700">Marks: {item.marks_awarded} / {item.max_marks}</p>
+              ) : (
+                <div class="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max={item.max_marks}
+                    value={marksDraft[item.id] ?? ''}
+                    onChange={(e) => setMarksDraft((current) => ({ ...current, [item.id]: e.target.value }))}
+                    class="w-24 px-2 py-1.5 bg-gray-50 border rounded-xl text-xs"
+                    placeholder="Marks"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => evaluate(item.id, item.max_marks)}
+                    class="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-xl"
+                  >
+                    Save marks
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+          {submissions.length === 0 && <p class="text-xs text-gray-500">No homework submitted yet.</p>}
         </div>
       )}
     </div>

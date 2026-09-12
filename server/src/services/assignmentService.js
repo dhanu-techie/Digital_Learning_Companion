@@ -33,6 +33,12 @@ class AssignmentService {
     return assignmentRepository.findAssignmentsByTeacher(teacherId);
   }
 
+  async getTeacherSubmissions(userId) {
+    const teacher = await userRepository.findTeacherByUserId(userId);
+    const teacherId = teacher ? teacher.id : userId;
+    return assignmentRepository.findSubmissionsByTeacher(teacherId);
+  }
+
   async getStudentAssignments(userId) {
     const student = await userRepository.findStudentByUserId(userId);
     const studentId = student ? student.id : userId;

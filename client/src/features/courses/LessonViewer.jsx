@@ -18,10 +18,22 @@ function flattenLessons(course) {
   return lessons;
 }
 
-export default function LessonViewer({ course, onBack }) {
+function lessonText(lesson) {
+  return lesson.text_content || lesson.content || 'Lesson text will appear here.';
+}
+
+function visualBlocks(text) {
+  return String(text)
+    .split(/(?<=\.)\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+export default function LessonViewer({ course, onBack, learningMode = 'visual' }) {
   const lessons = useMemo(() => flattenLessons(course), [course]);
   const [currentStep, setCurrentStep] = useState(1);
   const [completed, setCompleted] = useState(false);
+  const mode = learningMode || 'visual';
 
   const fallbackLessons = [
     {
@@ -45,7 +57,7 @@ export default function LessonViewer({ course, onBack }) {
           <ArrowLeft class="w-4 h-4 mr-1" /> Back to Courses
         </button>
         <span class="text-xs font-bold text-brand-600 bg-brand-50 px-2.5 py-1 rounded-lg">
-          {course.title}
+          {course.title} • {mode} mode
         </span>
       </div>
 
@@ -57,9 +69,39 @@ export default function LessonViewer({ course, onBack }) {
           <h3 class="text-xl font-bold text-gray-900">{current.title}</h3>
           <span class="text-xs font-semibold text-gray-400">Lesson {currentStep} of {steps.length}</span>
         </div>
-        <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 text-gray-800 text-sm leading-relaxed">
-          <p>{current.text_content || current.content || 'Lesson text will appear here.'}</p>
-        </div>
+        {mode === 'visual' && (
+          <div class="space-y-3">
+            <div class="bg-brand-50 border border-brand-100 rounded-xl p-5">
+              <p class="text-[11px] font-black uppercase tracking-wide text-brand-600 mb-2">Look first</p>
+              <p class="text-base font-bold text-gray-900 leading-snug">{visualBlocks(lessonText(current))[0]}</p>
+            </div>
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-2">
+              {visualBlocks(lessonText(current)).slice(1).map((line) => (
+                <p key={line} class="text-sm text-gray-700 leading-relaxed">• {line}</p>
+              ))}
+            </div>
+          </div>
+        )}
+        {mode === 'reading' && (
+          <div class="bg-white border border-gray-200 rounded-xl p-6 text-gray-800 text-sm leading-7">
+            <p>{lessonText(current)}</p>
+          </div>
+        )}
+        {mode === 'practice' && (
+          <div class="space-y-3">
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-5 text-gray-800 text-sm leading-relaxed">
+              <p>{lessonText(current)}</p>
+            </div>
+            <div class="bg-amber-50 border border-amber-100 rounded-xl p-4 text-xs text-amber-800">
+              Practice mode: after this lesson, open <span class="font-bold">Assessments</span> and take the matching test. A low score will add a remedial lesson to your Adaptive path.
+            </div>
+          </div>
+        )}
+        {mode !== 'visual' && mode !== 'reading' && mode !== 'practice' && (
+          <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 text-gray-800 text-sm leading-relaxed">
+            <p>{lessonText(current)}</p>
+          </div>
+        )}
       </div>
 
       <div class="flex items-center justify-between pt-4 border-t border-gray-100">

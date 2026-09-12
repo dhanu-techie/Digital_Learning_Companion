@@ -75,7 +75,7 @@ export default function CourseCatalog({ focusCourseId, learningMode }) {
   };
 
   if (selectedCourse) {
-    return <LessonViewer course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
+    return <LessonViewer course={selectedCourse} onBack={() => setSelectedCourse(null)} learningMode={learningMode} />;
   }
 
   if (courses.length === 0) {
