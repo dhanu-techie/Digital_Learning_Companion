@@ -3,9 +3,19 @@ const assessmentRepository = require('../repositories/assessmentRepository');
 const analyticsRepository = require('../repositories/analyticsRepository');
 const recommendationService = require('./recommendationService');
 
+function parseAnswer(value) {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch (err) {
+    return value;
+  }
+}
+
 class AssessmentService {
   async evaluateAttempt(submissionData, userId, isOffline = false) {
-    const { attemptId, assessmentId, answers, startedAt, completedAt } = submissionData;
+    const { assessmentId, answers, startedAt, completedAt } = submissionData;
+    const finalAttemptId = submissionData.attemptId || uuidv4();
     const assessment = await assessmentRepository.findAssessmentById(assessmentId);
 
     if (!assessment) {
@@ -29,11 +39,11 @@ class AssessmentService {
 
       let isCorrect = false;
       const given = ans.givenAnswer;
-      const correct = question.correct_answer_json;
+      const correct = parseAnswer(question.correct_answer_json);
 
       // Evaluate answer by type
       if (question.question_type === 'mcq' || question.question_type === 'true_false') {
-        isCorrect = JSON.stringify(given) === JSON.stringify(correct);
+        isCorrect = String(given) === String(correct);
       } else if (question.question_type === 'multi_select') {
         if (Array.isArray(given) && Array.isArray(correct)) {
           isCorrect = given.length === correct.length && given.every(val => correct.includes(val));
@@ -49,7 +59,7 @@ class AssessmentService {
 
       answerRecords.push({
         id: uuidv4(),
-        attemptId: attemptId || uuidv4(),
+        attemptId: finalAttemptId,
         questionId: question.id,
         givenAnswerJson: given,
         isCorrect,
@@ -66,7 +76,6 @@ class AssessmentService {
     const percentage = parseFloat(((scoreObtained / totalMarks) * 100).toFixed(2));
     const isPassed = percentage >= (assessment.passing_marks || 40);
 
-    const finalAttemptId = attemptId || uuidv4();
     await assessmentRepository.recordAttempt({
       id: finalAttemptId,
       assessmentId,

@@ -57,21 +57,21 @@ class AssessmentRepository {
 
   async recordAnswers(answers) {
     if (!answers || answers.length === 0) return;
-    const values = answers.map(a => [
-      a.id,
-      a.attemptId,
-      a.questionId,
-      JSON.stringify(a.givenAnswerJson),
-      a.isCorrect ? 1 : 0,
-      a.marksAwarded,
-      a.timeTakenSeconds
-    ]);
-
-    await db.query(
-      `INSERT INTO assessment_answers (id, attempt_id, question_id, given_answer_json, is_correct, marks_awarded, time_taken_seconds)
-       VALUES ?`,
-      [values]
-    );
+    for (const a of answers) {
+      await db.query(
+        `INSERT INTO assessment_answers (id, attempt_id, question_id, given_answer_json, is_correct, marks_awarded, time_taken_seconds)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          a.id,
+          a.attemptId,
+          a.questionId,
+          JSON.stringify(a.givenAnswerJson),
+          a.isCorrect ? 1 : 0,
+          a.marksAwarded,
+          a.timeTakenSeconds
+        ]
+      );
+    }
   }
 
   async findAttemptsByStudentId(studentId) {

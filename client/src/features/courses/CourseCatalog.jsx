@@ -34,6 +34,23 @@ export default function CourseCatalog() {
     setDownloadedCourseIds(ids);
   };
 
+  const openCourse = async (course) => {
+    try {
+      const res = await apiClient.get(`/courses/${course.id}`);
+      if (res.data.success) {
+        setSelectedCourse(res.data.data);
+        return;
+      }
+    } catch (err) {
+      const offline = await offlineStorage.getCourseById(course.id);
+      if (offline) {
+        setSelectedCourse(offline);
+        return;
+      }
+    }
+    setSelectedCourse(course);
+  };
+
   const handleDownload = async (courseId) => {
     setDownloadingId(courseId);
     try {
@@ -53,6 +70,14 @@ export default function CourseCatalog() {
 
   if (selectedCourse) {
     return <LessonViewer course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
+  }
+
+  if (courses.length === 0) {
+    return (
+      <div class="bg-white rounded-2xl p-8 border border-gray-100 text-center text-sm text-gray-500">
+        No courses are available yet. Please refresh in a moment.
+      </div>
+    );
   }
 
   return (
@@ -87,7 +112,7 @@ export default function CourseCatalog() {
                 )}
 
                 <button
-                  onClick={() => setSelectedCourse(course)}
+                  onClick={() => openCourse(course)}
                   class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center space-x-1 transition-colors cursor-pointer"
                 >
                   <Play class="w-3.5 h-3.5" />

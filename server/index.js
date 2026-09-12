@@ -1,11 +1,16 @@
 const app = require('./src/app');
 const env = require('./src/config/env');
 const { initializeDatabase } = require('./src/config/db');
+const { seedDemoContent } = require('./src/scripts/demoContent');
 
 async function startServer() {
   try {
-    // Attempt database initialization
     await initializeDatabase();
+    try {
+      await seedDemoContent();
+    } catch (seedError) {
+      console.error('[SEED] Demo content failed:', seedError.message);
+    }
 
     const server = app.listen(env.PORT, '0.0.0.0', () => {
       console.log(`=======================================================`);
