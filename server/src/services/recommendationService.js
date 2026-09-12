@@ -6,7 +6,9 @@ class RecommendationService {
    * Evaluates student performance and generates targeted remedial recommendations
    */
   async evaluateAndRecommend(studentId, topicId, scorePercentage, attemptsCount) {
-    if (scorePercentage < 50.0 && attemptsCount >= 2) {
+    if (scorePercentage < 50.0 && attemptsCount >= 1) {
+      const open = await analyticsRepository.findOpenRecommendation(studentId, topicId, 'remedial_lesson');
+      if (open) return { generated: false };
       const recId = uuidv4();
       await analyticsRepository.createRecommendation({
         id: recId,
@@ -21,6 +23,8 @@ class RecommendationService {
         recommendation: 'Watch 10-minute visual concept video and solve 5 easy practice questions.'
       };
     } else if (scorePercentage >= 80.0) {
+      const open = await analyticsRepository.findOpenRecommendation(studentId, topicId, 'next_topic');
+      if (open) return { generated: false };
       const recId = uuidv4();
       await analyticsRepository.createRecommendation({
         id: recId,

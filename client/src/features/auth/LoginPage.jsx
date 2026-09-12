@@ -73,6 +73,9 @@ export default function LoginPage() {
     } else if (role === 'admin') {
       setUsername('admin');
       setPassword('password123');
+    } else if (role === 'parent') {
+      setUsername('parent1');
+      setPassword('password123');
     }
   };
 
@@ -282,7 +285,7 @@ export default function LoginPage() {
 
         <div class="mt-8 pt-6 border-t border-gray-100">
           <p class="text-xs text-center font-bold text-gray-500 uppercase mb-3">Quick Demo Auto-Fill</p>
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-4 gap-2">
             <button
               onClick={() => setDemoCredentials('student')}
               class="py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg transition-colors"
@@ -294,6 +297,12 @@ export default function LoginPage() {
               class="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg transition-colors"
             >
               Teacher
+            </button>
+            <button
+              onClick={() => setDemoCredentials('parent')}
+              class="py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg transition-colors"
+            >
+              Parent
             </button>
             <button
               onClick={() => setDemoCredentials('admin')}

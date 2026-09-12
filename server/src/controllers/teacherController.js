@@ -14,7 +14,7 @@ class TeacherController {
         });
       }
 
-      const studentsNeedingHelp = await analyticsRepository.getStudentsNeedingTeacherIntervention(teacher.id);
+      const studentsNeedingHelp = await analyticsRepository.getStudentsNeedingTeacherIntervention(teacher.school_id);
 
       res.json({
         success: true,

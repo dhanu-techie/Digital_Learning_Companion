@@ -29,7 +29,12 @@ const IDS = {
   bankEng: 'f1000000-0000-4000-8000-000000000003',
   assessMath: 'aa000000-0000-4000-8000-000000000001',
   assessSci: 'aa000000-0000-4000-8000-000000000002',
-  assessEng: 'aa000000-0000-4000-8000-000000000003'
+  assessEng: 'aa000000-0000-4000-8000-000000000003',
+  class8: 'a1000000-0000-4000-8000-000000000010',
+  assignment1: 'a1000000-0000-4000-8000-000000000011',
+  parentUser: 'a1000000-0000-4000-8000-000000000012',
+  parent: 'a1000000-0000-4000-8000-000000000013',
+  parentRel: 'a1000000-0000-4000-8000-000000000014'
 };
 
 async function getOrCreateId(selectSql, selectParams, insertSql, insertParams, fallbackId) {
@@ -94,6 +99,7 @@ async function seedDemoContent() {
 
   if (alreadySeeded) {
     console.log('[SEED] Demo users ensured. Courses already present, skipping content insert.');
+    await ensureClassroomGraph(schoolId, passwordHash);
     return;
   }
 
@@ -234,6 +240,68 @@ async function seedDemoContent() {
   }
 
   console.log('[SEED] Demo users, 3 courses, lessons, and 3 assessments are ready.');
+  await ensureClassroomGraph(schoolId, passwordHash);
+}
+
+async function ensureClassroomGraph(schoolId, passwordHash) {
+  await insertIgnore(
+    `INSERT IGNORE INTO classes (id, school_id, name, grade, section, academic_year)
+     VALUES (?, ?, 'Class 8-A', '8', 'A', '2026-2027')`,
+    [IDS.class8, schoolId]
+  );
+
+  const [classRows] = await db.query('SELECT id FROM classes ORDER BY created_at ASC LIMIT 1');
+  const classId = classRows[0]?.id || IDS.class8;
+  const [teacherRows] = await db.query('SELECT id FROM teachers LIMIT 1');
+  const teacherId = teacherRows[0]?.id || IDS.teacher;
+  const [subjectRows] = await db.query('SELECT id FROM subjects LIMIT 1');
+  const subjectId = subjectRows[0]?.id || IDS.math;
+
+  const [students] = await db.query('SELECT id FROM students');
+  for (const student of students) {
+    await insertIgnore(
+      'INSERT IGNORE INTO class_enrollments (id, class_id, student_id) VALUES (?, ?, ?)',
+      [`e${student.id.slice(1)}`, classId, student.id]
+    );
+    await insertIgnore(
+      `INSERT IGNORE INTO teacher_student_relationships (id, teacher_id, student_id, class_id, subject_id)
+       VALUES (?, ?, ?, ?, ?)`,
+      [`r${student.id.slice(1)}`, teacherId, student.id, classId, subjectId]
+    );
+  }
+
+  if (subjectId) {
+    await insertIgnore(
+      `INSERT IGNORE INTO assignments (id, class_id, teacher_id, subject_id, title, description, due_date, max_marks)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 20)`,
+      [
+        IDS.assignment1,
+        classId,
+        teacherId,
+        subjectId,
+        'Fractions practice worksheet',
+        'Solve 5 fraction problems in your notebook and write one real-life example.',
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      ]
+    );
+  }
+
+  await insertIgnore(
+    `INSERT IGNORE INTO users (id, school_id, username, email, password_hash, role, first_name, last_name)
+     VALUES (?, ?, 'parent1', 'parent1@ruraledu.org', ?, 'parent', 'Lakshmi', 'Selvam')`,
+    [IDS.parentUser, schoolId, passwordHash]
+  );
+  await insertIgnore(
+    'INSERT IGNORE INTO parents (id, user_id, occupation) VALUES (?, ?, ?)',
+    [IDS.parent, IDS.parentUser, 'Farmer']
+  );
+  await insertIgnore(
+    `INSERT IGNORE INTO parent_student_relationships (id, parent_id, student_id, relationship_type)
+     VALUES (?, ?, ?, 'mother')`,
+    [IDS.parentRel, IDS.parent, IDS.student]
+  );
+
+  console.log('[SEED] Classroom graph, homework, and parent link are ready.');
 }
 
 module.exports = { seedDemoContent, IDS };

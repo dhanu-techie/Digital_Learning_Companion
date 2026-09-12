@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../../services/api/apiClient';
 import { offlineStorage } from '../../services/db/indexedDB';
 import LessonViewer from './LessonViewer';
-import { Download, CheckCircle, Play, FileText } from 'lucide-react';
+import { Download, CheckCircle, Play } from 'lucide-react';
 
-export default function CourseCatalog() {
+export default function CourseCatalog({ focusCourseId, learningMode }) {
   const [courses, setCourses] = useState([]);
   const [downloadedCourseIds, setDownloadedCourseIds] = useState(new Set());
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -14,6 +14,12 @@ export default function CourseCatalog() {
     fetchCourses();
     checkOfflineStatus();
   }, []);
+
+  useEffect(() => {
+    if (!focusCourseId || courses.length === 0) return;
+    const match = courses.find((course) => course.id === focusCourseId) || courses[0];
+    openCourse(match);
+  }, [focusCourseId, courses]);
 
   const fetchCourses = async () => {
     try {
@@ -92,7 +98,7 @@ export default function CourseCatalog() {
                   {course.subject_name || 'Mathematics'}
                 </span>
                 <h3 class="text-lg font-bold text-gray-900 leading-snug">{course.title}</h3>
-                <p class="text-xs text-gray-500 mt-2 line-clamp-2">{course.description}</p>
+                <p class={`text-xs text-gray-500 mt-2 ${learningMode === 'visual' ? '' : 'line-clamp-2'}`}>{course.description}</p>
               </div>
 
               <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">

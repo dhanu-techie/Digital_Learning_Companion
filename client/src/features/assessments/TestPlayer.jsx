@@ -13,7 +13,7 @@ function parseJsonField(value, fallback) {
   }
 }
 
-export default function TestPlayer() {
+export default function TestPlayer({ onCompleted }) {
   const [assessments, setAssessments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeAssessment, setActiveAssessment] = useState(null);
@@ -97,6 +97,7 @@ export default function TestPlayer() {
       if (res.data.success) {
         setTestReport(res.data.data);
         await offlineStorage.saveAttempt({ id: attemptId, ...res.data.data });
+        if (onCompleted) onCompleted(res.data.data);
         setSubmitting(false);
         return;
       }

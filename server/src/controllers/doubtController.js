@@ -1,4 +1,5 @@
 const doubtService = require('../services/doubtService');
+const doubtRepository = require('../repositories/doubtRepository');
 
 class DoubtController {
   async createDoubt(req, res, next) {
@@ -29,6 +30,29 @@ class DoubtController {
         success: true,
         message: 'Doubts retrieved successfully',
         data: doubts,
+        error: null,
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getDoubtById(req, res, next) {
+    try {
+      const thread = await doubtRepository.findDoubtById(req.params.id);
+      if (!thread) {
+        return res.status(404).json({
+          success: false,
+          message: 'Doubt thread not found',
+          data: null,
+          error: 'NOT_FOUND'
+        });
+      }
+      res.json({
+        success: true,
+        message: 'Doubt retrieved',
+        data: thread,
         error: null,
         timestamp: new Date().toISOString()
       });

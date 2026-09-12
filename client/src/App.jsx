@@ -5,6 +5,24 @@ import OfflineBanner from './components/offline/OfflineBanner';
 import LoginPage from './features/auth/LoginPage';
 import StudentDashboard from './features/student/StudentDashboard';
 import TeacherDashboard from './features/teacher/TeacherDashboard';
+import ParentDashboard from './features/parent/ParentDashboard';
+import AdminDashboard from './features/admin/AdminDashboard';
+
+function DashboardForRole({ role }) {
+  switch (role) {
+    case 'student':
+      return <StudentDashboard />;
+    case 'teacher':
+      return <TeacherDashboard />;
+    case 'parent':
+      return <ParentDashboard />;
+    case 'school_admin':
+    case 'super_admin':
+      return <AdminDashboard />;
+    default:
+      return <StudentDashboard />;
+  }
+}
 
 export default function App() {
   const { user, loading } = useContext(AuthContext);
@@ -25,11 +43,8 @@ export default function App() {
     <div class="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       <OfflineBanner />
-
       <main class="flex-1">
-        {user.role === 'student' && <StudentDashboard />}
-        {user.role === 'teacher' && <TeacherDashboard />}
-        {user.role !== 'student' && user.role !== 'teacher' && <StudentDashboard />}
+        <DashboardForRole role={user.role} />
       </main>
     </div>
   );

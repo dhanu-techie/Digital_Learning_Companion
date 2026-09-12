@@ -23,6 +23,19 @@ class AssignmentRepository {
     return rows[0] || null;
   }
 
+  async findAssignmentsByTeacher(teacherId) {
+    const [rows] = await db.query(
+      `SELECT a.*, s.name as subject_name, c.name as class_name
+       FROM assignments a
+       JOIN subjects s ON a.subject_id = s.id
+       JOIN classes c ON a.class_id = c.id
+       WHERE a.teacher_id = ?
+       ORDER BY a.due_date ASC`,
+      [teacherId]
+    );
+    return rows;
+  }
+
   async findAssignmentsByStudent(studentId) {
     const [rows] = await db.query(
       `SELECT a.*, s.name as subject_name, sub.status as submission_status, sub.marks_awarded, sub.submitted_at

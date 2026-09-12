@@ -16,12 +16,14 @@ class AssignmentController {
     }
   }
 
-  async getStudentAssignments(req, res, next) {
+  async getAssignments(req, res, next) {
     try {
-      const assignments = await assignmentService.getStudentAssignments(req.user.id);
+      const assignments = req.user.role === 'student'
+        ? await assignmentService.getStudentAssignments(req.user.id)
+        : await assignmentService.getTeacherAssignments(req.user.id);
       res.json({
         success: true,
-        message: 'Student assignments fetched successfully',
+        message: 'Assignments fetched successfully',
         data: assignments,
         error: null,
         timestamp: new Date().toISOString()
@@ -33,7 +35,10 @@ class AssignmentController {
 
   async submitAssignment(req, res, next) {
     try {
-      const result = await assignmentService.submitAssignment(req.body, req.user.id, false);
+      const result = await assignmentService.submitAssignment({
+        ...req.body,
+        assignmentId: req.body.assignmentId || req.params.id
+      }, req.user.id, false);
       res.json({
         success: true,
         message: 'Assignment submitted successfully',

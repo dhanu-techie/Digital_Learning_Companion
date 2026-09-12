@@ -88,6 +88,44 @@ class UserRepository {
     return rows[0] || null;
   }
 
+  async findClassroomForStudent(userId) {
+    const [rows] = await db.query(
+      `SELECT tsr.teacher_id, tsr.subject_id, tsr.class_id, u.first_name as teacher_first_name, u.last_name as teacher_last_name, s.name as subject_name
+       FROM teacher_student_relationships tsr
+       JOIN students st ON st.id = tsr.student_id
+       JOIN teachers t ON t.id = tsr.teacher_id
+       JOIN users u ON u.id = t.user_id
+       LEFT JOIN subjects s ON s.id = tsr.subject_id
+       WHERE st.user_id = ?
+       LIMIT 1`,
+      [userId]
+    );
+    return rows[0] || null;
+  }
+
+  async assignStudentToDefaultClassroom(userId) {
+    const student = await this.findStudentByUserId(userId);
+    if (!student) return;
+
+    const [classes] = await db.query('SELECT id FROM classes ORDER BY created_at ASC LIMIT 1');
+    const [teachers] = await db.query('SELECT id FROM teachers ORDER BY created_at ASC LIMIT 1');
+    const [subjects] = await db.query('SELECT id FROM subjects ORDER BY created_at ASC LIMIT 1');
+    if (!classes[0] || !teachers[0]) return;
+
+    const enrollId = `e${student.id.slice(1)}`;
+    await db.query(
+      'INSERT IGNORE INTO class_enrollments (id, class_id, student_id) VALUES (?, ?, ?)',
+      [enrollId, classes[0].id, student.id]
+    );
+
+    const relId = `r${student.id.slice(1)}`;
+    await db.query(
+      `INSERT IGNORE INTO teacher_student_relationships (id, teacher_id, student_id, class_id, subject_id)
+       VALUES (?, ?, ?, ?, ?)`,
+      [relId, teachers[0].id, student.id, classes[0].id, subjects[0]?.id || null]
+    );
+  }
+
   async updateTeacherAvailability(userId, availabilityData) {
     const { isAvailableForDoubts, doubtStartTime, doubtEndTime, maxDoubtsPerDay } = availabilityData;
     await db.query(

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import apiClient from '../../services/api/apiClient';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 function flattenLessons(course) {
@@ -79,7 +80,16 @@ export default function LessonViewer({ course, onBack }) {
           </button>
         ) : (
           <button
-            onClick={() => setCompleted(true)}
+            onClick={async () => {
+              setCompleted(true);
+              if (current.id) {
+                try {
+                  await apiClient.post(`/students/me/lessons/${current.id}/complete`);
+                } catch (err) {
+                  console.warn('[LESSON] Progress saved locally only');
+                }
+              }
+            }}
             class="px-5 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors flex items-center space-x-1 cursor-pointer"
           >
             <CheckCircle2 class="w-4 h-4 mr-1" />

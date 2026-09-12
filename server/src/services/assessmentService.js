@@ -2,6 +2,8 @@ const { v4: uuidv4 } = require('uuid');
 const assessmentRepository = require('../repositories/assessmentRepository');
 const analyticsRepository = require('../repositories/analyticsRepository');
 const recommendationService = require('./recommendationService');
+const gamificationRepository = require('../repositories/gamificationRepository');
+const userRepository = require('../repositories/userRepository');
 
 function parseAnswer(value) {
   if (typeof value !== 'string') return value;
@@ -25,7 +27,7 @@ class AssessmentService {
     }
 
     // Get student profile
-    const student = await require('../repositories/userRepository').findStudentByUserId(userId);
+    const student = await userRepository.findStudentByUserId(userId);
     const studentId = student ? student.id : userId;
 
     let scoreObtained = 0;
@@ -91,9 +93,19 @@ class AssessmentService {
 
     await assessmentRepository.recordAnswers(answerRecords);
 
-    // Trigger recommendations if necessary
-    if (assessment.questions[0] && assessment.questions[0].topic_id) {
-      await recommendationService.evaluateAndRecommend(studentId, assessment.questions[0].topic_id, percentage, 2);
+    const firstTopicId = assessment.questions.find((q) => q.topic_id)?.topic_id;
+    if (firstTopicId) {
+      const mastery = await analyticsRepository.getTopicMasteryForTopic(studentId, firstTopicId);
+      await recommendationService.evaluateAndRecommend(
+        studentId,
+        firstTopicId,
+        mastery ? Number(mastery.mastery_percentage) : percentage,
+        mastery ? Number(mastery.total_attempts) : 1
+      );
+    }
+
+    if (student && student.id) {
+      await gamificationRepository.incrementStreak(student.id);
     }
 
     return {

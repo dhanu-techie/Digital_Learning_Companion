@@ -71,6 +71,7 @@ class AuthService {
         board: data.board || 'StateBoard',
         dateOfBirth: data.dateOfBirth
       });
+      await userRepository.assignStudentToDefaultClassroom(userId);
     } else if (role === 'teacher') {
       await userRepository.createTeacherProfile({
         id: uuidv4(),
