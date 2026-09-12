@@ -3,16 +3,25 @@ const fs = require('fs');
 const path = require('path');
 const env = require('./env');
 
-const pool = mysql.createPool({
+const ssl = env.DB.SSL
+  ? { rejectUnauthorized: env.DB.SSL_REJECT_UNAUTHORIZED }
+  : undefined;
+
+const sharedConnection = {
   host: env.DB.HOST,
   port: env.DB.PORT,
   user: env.DB.USER,
   password: env.DB.PASSWORD,
+  ssl,
+  multipleStatements: true
+};
+
+const pool = mysql.createPool({
+  ...sharedConnection,
   database: env.DB.NAME,
   waitForConnections: true,
   connectionLimit: 20,
-  queueLimit: 0,
-  multipleStatements: true
+  queueLimit: 0
 });
 
 /**
@@ -21,16 +30,13 @@ const pool = mysql.createPool({
 async function initializeDatabase() {
   try {
     // 1. Connection check without database specified
-    const tempConn = await mysql.createConnection({
-      host: env.DB.HOST,
-      port: env.DB.PORT,
-      user: env.DB.USER,
-      password: env.DB.PASSWORD,
-      multipleStatements: true
-    });
-
-    await tempConn.query(`CREATE DATABASE IF NOT EXISTS \`${env.DB.NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
-    await tempConn.end();
+    try {
+      const tempConn = await mysql.createConnection(sharedConnection);
+      await tempConn.query(`CREATE DATABASE IF NOT EXISTS \`${env.DB.NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+      await tempConn.end();
+    } catch (createErr) {
+      console.warn('[DB] Skipping database create (managed MySQL often denies this):', createErr.message);
+    }
 
     // 2. Test pool connection
     const conn = await pool.getConnection();

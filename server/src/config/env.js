@@ -1,6 +1,15 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
+const listedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const extraOrigins = [process.env.FRONTEND_URL, process.env.RENDER_EXTERNAL_URL]
+  .filter(Boolean)
+  .map((origin) => origin.trim());
+
 module.exports = {
   PORT: process.env.PORT || 5000,
   NODE_ENV: process.env.NODE_ENV || 'development',
@@ -10,6 +19,8 @@ module.exports = {
     USER: process.env.DB_USER || 'root',
     PASSWORD: process.env.DB_PASSWORD || 'root',
     NAME: process.env.DB_NAME || 'digital_learning_db',
+    SSL: process.env.DB_SSL === 'true',
+    SSL_REJECT_UNAUTHORIZED: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
   },
   JWT: {
     SECRET: process.env.JWT_SECRET || 'super_secret_digital_learning_jwt_key_2026',
@@ -18,6 +29,6 @@ module.exports = {
     REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
   CORS: {
-    ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173').split(','),
+    ALLOWED_ORIGINS: [...new Set([...listedOrigins, ...extraOrigins])],
   }
 };

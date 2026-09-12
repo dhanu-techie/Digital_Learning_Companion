@@ -7,7 +7,7 @@ async function startServer() {
     // Attempt database initialization
     await initializeDatabase();
 
-    const server = app.listen(env.PORT, () => {
+    const server = app.listen(env.PORT, '0.0.0.0', () => {
       console.log(`=======================================================`);
       console.log(` 🚀 Digital Learning Backend Running on Port ${env.PORT}`);
       console.log(` 🌍 Environment: ${env.NODE_ENV}`);

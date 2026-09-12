@@ -8,10 +8,18 @@ const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (env.CORS.ALLOWED_ORIGINS.includes(origin)) return true;
+  return env.NODE_ENV === 'production' && /^https:\/\/[\w-]+\.onrender\.com$/.test(origin);
+}
+
 // Security Middlewares
 app.use(helmet());
 app.use(cors({
-  origin: env.CORS.ALLOWED_ORIGINS,
+  origin(origin, callback) {
+    callback(null, isAllowedOrigin(origin));
+  },
   credentials: true
 }));
 
@@ -42,6 +50,14 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     status: 'ONLINE',
     documentation: '/api/v1/health'
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'UP',
+    service: 'digital-learning-backend',
+    timestamp: new Date().toISOString()
   });
 });
 

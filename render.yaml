@@ -1,0 +1,78 @@
+# Render Blueprint — deploys frontend + backend from this GitHub repo.
+# After the first Blueprint sync, pushes to main deploy only when GitHub CI passes.
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: dlc-api
+    runtime: node
+    plan: free
+    rootDir: server
+    region: oregon
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - server/**
+        - .agents/skills/digital-learning-platform/references/mysql_schema.sql
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 1d
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: FRONTEND_URL
+        fromService:
+          name: dlc-web
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSL
+        sync: false
+
+  - type: web
+    name: dlc-web
+    runtime: static
+    rootDir: client
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - client/**
+        - render.yaml
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: dlc-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
